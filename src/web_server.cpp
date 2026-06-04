@@ -365,7 +365,7 @@ void handleLogin(){
 
   if(loginFailCount >= 3)
   {
-      loginBlockedUntil = millis() + 10000UL; // 10 detik
+      loginBlockedUntil = millis() + 60000UL; // 1 menit
       loginFailCount = 0;
   }
 
