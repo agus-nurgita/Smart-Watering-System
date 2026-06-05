@@ -5,6 +5,7 @@
 #include "telegram.h"
 #include "control.h"
 #include "sensors.h"
+#include "web_server.h"
 
 #include <WiFi.h>
 

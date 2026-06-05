@@ -205,16 +205,34 @@ void setup(){
   int retry = 0;
   unsigned long ntpStart = millis();
 
-  while(dayNow() == -1){
+  struct tm timeinfo;
+  bool timeOK = false;
+
+  configTime(8 * 3600, 0,
+    "pool.ntp.org",
+    "time.google.com",
+    "time.nist.gov"
+  );
+
+  unsigned long start = millis();
+
+  while(millis() - start < 8000){
 
     ArduinoOTA.handle();
-    yield();
-    delay(10);
+    delay(100);
 
-    if(millis() - ntpStart > 5000){
-      Serial.println("NTP timeout");
-      break;
+    if(getLocalTime(&timeinfo)){
+      if(timeinfo.tm_year + 1900 >= 2025){
+        timeOK = true;
+        break;
+      }
     }
+  }
+
+  if(!timeOK){
+    Serial.println("❌ NTP FAILED");
+  } else {
+    Serial.println("✅ NTP OK");
   }
 
   lastDay = dayNow();
@@ -268,6 +286,8 @@ void loop(){
   }
 
   server.handleClient();
+
+  sessionMaintenance();
 
   wifiReconnectTask();
 

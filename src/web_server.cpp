@@ -163,6 +163,7 @@ void initWebServer(){
   server.on("/schedule", handleSchedule);
   server.on("/history", handleHistory);
   server.on("/report", handleReport);
+  server.on("/debugtoken", handleDebugToken);
 
   server.onNotFound([]() {
 
@@ -186,11 +187,11 @@ void initWebServer(){
   server.begin();
 }
 
-void handleLogout()
-{
+void handleLogout(){
+
     if(!server.hasArg("token"))
     {
-        server.send(401, "text/plain", "Unauthorized");
+        server.send(401,"text/plain", "Missing token");
         return;
     }
 
@@ -208,16 +209,23 @@ void handleLogout()
         }
     }
 
-    server.send(401, "text/plain", "Unauthorized");
+    server.send(200, "text/plain", "Already logged out");
 }
 
 void cleanupSessions(){
+    unsigned long now = millis();
+
     for(int i = 0; i < MAX_SESSIONS; i++)
     {
-        if(sessionTokens[i] != "")
+        if(sessionTokens[i].length() > 0)
         {
-            if(millis() - sessionTimes[i] > SESSION_TIMEOUT)
+            unsigned long age = now - sessionTimes[i];
+
+            if(age >= SESSION_TIMEOUT)
             {
+                Serial.println("🧹 EXPIRED SESSION REMOVED:");
+                Serial.println(sessionTokens[i]);
+
                 sessionTokens[i] = "";
                 sessionTimes[i] = 0;
             }
@@ -225,10 +233,24 @@ void cleanupSessions(){
     }
 }
 
+void sessionMaintenance(){
+    static unsigned long last = 0;
+
+    if(millis() - last >= 60000) // tiap 1 menit
+    {
+        cleanupSessions();
+        last = millis();
+
+        Serial.println("🧹 sessionMaintenance running");
+    }
+}
+
 // ======================
 // HANDLE DATA (API)
 // ======================
 void handleData() {
+
+  cleanupSessions();
 
   if(!isAuthenticated()){
     server.send(401, "text/plain", "Unauthorized");
@@ -271,31 +293,37 @@ void handleData() {
 }
 
 bool isAuthenticated(){
-    if(!server.hasArg("token")){
-        return false;
-    }
 
-    String token = server.arg("token");
+  cleanupSessions();
 
-    for(int i = 0; i < MAX_SESSIONS; i++)
-    {
-        if(sessionTokens[i] == token){
-            if(millis() - sessionTimes[i] > SESSION_TIMEOUT)
-            {
-                sessionTokens[i] = "";
-                sessionTimes[i] = 0;
-                return false;
-            }
+  if(!server.hasArg("token")){
+      return false;
+  }
 
-            sessionTimes[i] = millis(); // refresh session
-            return true;
-        }
-    }
+  String token = server.arg("token");
 
-    return false;
+  for(int i = 0; i < MAX_SESSIONS; i++)
+  {
+      if(sessionTokens[i] == token)
+      {
+          // cek expired saja
+          if(millis() - sessionTimes[i] > SESSION_TIMEOUT)
+          {
+              sessionTokens[i] = "";
+              sessionTimes[i] = 0;
+              return false;
+          }
+
+          return true; // ❗ tidak refresh waktu
+      }
+  }
+
+  return false;
 }
 
 void handleLogin(){
+
+  cleanupSessions();
 
   if(millis() < loginBlockedUntil){
       server.send(429, "text/plain", "Too many login attempts");
@@ -316,15 +344,17 @@ void handleLogin(){
 
     String newToken = String(millis()) + "_GH";
 
+    telnetClient.println("=== LOGIN SUCCESS ===");
+    telnetClient.println("TOKEN = " + newToken);
+
     bool slotFound = false;
 
     for(int i = 0; i < MAX_SESSIONS; i++)
     {
-        if(sessionTokens[i] == "")
+        if(sessionTokens[i] == "" || millis() - sessionTimes[i] > SESSION_TIMEOUT)
         {
             sessionTokens[i] = newToken;
             sessionTimes[i] = millis();
-
             slotFound = true;
             break;
         }
@@ -370,6 +400,23 @@ void handleLogin(){
   }
 
   server.send(401, "text/plain", "Invalid username or password");
+}
+
+void handleDebugToken(){
+
+  cleanupSessions(); // 🔥 force refresh sebelum tampil
+  
+    String result = "";
+
+    for(int i=0;i<MAX_SESSIONS;i++)
+    {
+        result += String(i);
+        result += " = ";
+        result += sessionTokens[i];
+        result += "\n";
+    }
+
+    server.send(200,"text/plain",result);
 }
 
 void handleMode(){

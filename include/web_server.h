@@ -23,6 +23,8 @@ void logHourlyData();
 void resetDailyLog();
 void handleLogout();
 void cleanupSessions();
+void sessionMaintenance();
+void handleDebugToken();
 
 
 #endif
