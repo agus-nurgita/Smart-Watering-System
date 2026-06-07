@@ -220,8 +220,6 @@ else {
   pumpState = false;
 }
 
-digitalWrite(RELAY_PIN, pumpState ? LOW : HIGH);
-pumpStatusUpdate(pumpState);
   // ======================================================
   // ================= OUTPUT CONTROL =====================
   // ======================================================
@@ -244,7 +242,7 @@ int getEstimatedDuration(int h){
 
   if(isForecastRainAtHour(h)){
     wateringDecision = "FORECAST_HALF";
-    return 40; // MAX 40 DETIK
+    return 300; // MAX 5 MENIT
   }
 
   wateringDecision = "FULL";
@@ -290,7 +288,7 @@ int getAutoWaterDurationAI(int slotHour){
 
   if(tAir >= 34 && hAir <= 50){
       wateringDecision = "HALF";
-      return 10;
+      return 180; // 3 menit
     }
 
     wateringDecision = "BLOCK_SOIL";
@@ -298,7 +296,7 @@ int getAutoWaterDurationAI(int slotHour){
   }
 
   // ===== BASE DURATION =====
-  int dur = 50;
+  int dur = 300; // durasi dasar 5 menit (300 detik)
 
   if(soilPercent < 50) dur += 15;
   else if(soilPercent < 65) dur += 10;
@@ -326,9 +324,9 @@ int getAutoWaterDurationAI(int slotHour){
   }
 
   // ===== LIMIT =====
-  if(seasonMode == 0) dur = constrain(dur, 25, 90);
-  else if(seasonMode == 1) dur = constrain(dur, 40, 120);
-  else if(seasonMode == 2) dur = constrain(dur, 20, 40);
+  if(seasonMode == 0) dur = constrain(dur, 240, 300);
+  else if(seasonMode == 1) dur = constrain(dur, 280, 360);
+  else if(seasonMode == 2) dur = constrain(dur, 180, 240);
 
 
   if(dur <= 0){
