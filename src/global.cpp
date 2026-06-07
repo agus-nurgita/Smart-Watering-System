@@ -30,7 +30,7 @@ unsigned long pumpStartAuto = 0;
 unsigned long pumpStartManual = 0;
 unsigned long currentWaterDuration = 0;
 
-const unsigned long MAX_PUMP_ON = 240000UL;
+const unsigned long MAX_PUMP_ON = 480000UL;
 // ================= MODE =================
 bool manualMode = false;
 bool lastManualMode = false;
